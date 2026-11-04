@@ -15,6 +15,13 @@ The compose carries the Dockerfile's environment, working directory, command and
 The App Manager must supply `APP_SOURCE_DIR` (wizard-app-manager#153); do not merge this
 recipe until that support ships in a Wizard release. The Dockerfile remains a development option.
 
+## Reply (0.3.2)
+
+On a title's card, **Reply** (next to Share movie) opens a new, unsent Wizard Chats draft with that title
+attached (type, year, genres, length, queue status, watch dates, director, cast, IMDb rating and links, synopsis
+and notes excerpts), so the owner can start a thread with his agent about it. It goes through the shell's
+`WizardApp.nav.openContextDraft`; Movies sends nothing. Shells without that function simply don't show Reply.
+
 ## Run locally
 
 ```bash

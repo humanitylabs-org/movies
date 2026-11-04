@@ -308,3 +308,18 @@ def test_design_rules_fill_window_and_sheet_swipe_close():
     import re
     assert not re.search(r"\.wrap\s*\{[^}]*max-width", CSS)
     assert "addRequestHead.addEventListener('touchend'" in APP
+
+
+def test_detail_reply_opens_an_unsent_chats_draft_only():
+    # Reply hands the title to the shell's unsent Chats draft; feature-detected, synchronous, never sends.
+    assert "typeof window.WizardApp?.nav?.openContextDraft === 'function'" in APP
+    assert 'class="detail-reply" type="button"' in APP and '>Reply</button>' in APP
+    assert "nav.openContextDraft(replyContext(movie))" in APP
+    assert "receipt?.kind !== 'unsent-draft' || receipt.sent !== false" in APP
+    assert "Reload Wizard (refresh the whole page) to turn on Reply. Nothing sent." in APP
+    assert "Draft opened in Chats with this title attached. Nothing sent." in APP
+    body = APP.split("function replyToMovie", 1)[1].split("\nfunction openMovie", 1)[0]
+    assert "await" not in body and "fetch(" not in body and "openThread" not in body
+    ctx = APP.split("function replyContext", 1)[1].split("\nfunction replyToMovie", 1)[0]
+    assert "id: 'title-' + key" in ctx and "slice(0, 32000)" in ctx and "`Movies: ${movie.title}" in ctx
+    assert ".detail-reply-status" in CSS

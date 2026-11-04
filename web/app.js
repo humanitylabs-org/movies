@@ -1154,6 +1154,58 @@ async function loadWhereToWatch(movie) {
   }
 }
 
+// Reply: opens an UNSENT main Chats draft with this title attached (WizardApp.nav.openContextDraft).
+// Every fact is already in the view, so the tap calls the shell synchronously (user activation). Older Wizard
+// shells have no openContextDraft: Reply just is not shown. Movies never sends anything.
+const canReply = () => typeof window.WizardApp?.nav?.openContextDraft === 'function';
+function clip(text, limit) {
+  text = String(text || '').trim();
+  if (text.length <= limit) return text;
+  return text.slice(0, limit).replace(/\s+\S*$/, '').replace(/[\s,.;:]+$/, '') + ' …';
+}
+function replyContext(movie) {
+  const kind = movie.media_type === 'series' ? 'series' : 'film';
+  const queue = movies.filter(m => isQueued(m) && !m.archived);
+  const pos = queue.findIndex(m => m.id === movie.id) + 1;
+  const watches = watchHistory(movie).map(e => e.watched_on).filter(Boolean).sort().reverse();
+  const status = movie.archived ? 'archived'
+    : pos ? `in the Unwatched queue, #${pos} of ${queue.length}`
+    : (watches.length ? 'watched' : 'not in the queue');
+  const makers = movie.media_type === 'series' ? (movie.creators || movie.directors || []) : (movie.directors || []);
+  const value = ratingValue(movie);
+  const imdbId = /^tt\d{7,10}$/.test(String(movie.imdb_id || '')) ? movie.imdb_id : '';
+  const lines = [`Movies ${kind}: ${movie.title}${movie.year ? ` (${movie.year})` : ''} (card id ${movie.id})`];
+  const meta = [(movie.genres || []).join(', '), runtimeLabel(movie)].filter(Boolean);
+  if (meta.length) lines.push(meta.join(' · '));
+  lines.push(`Status: ${status}`);
+  lines.push(watches.length ? `Watched ${watches.length}×: ${watches.slice(0, 10).join(', ')}` : 'Watched: never');
+  if (makers.length) lines.push(`${movie.media_type === 'series' ? 'Creator' : 'Director'}: ${makers.join(', ')}`);
+  if ((movie.cast || []).length) lines.push(`Lead cast: ${movie.cast.slice(0, 6).join(', ')}`);
+  if (value) lines.push(`IMDb users: ${ratingLabel(value)}/10${compactVoteCount(movie) ? ` (${compactVoteCount(movie)} votes)` : ''}`);
+  if (imdbId) lines.push(`IMDb: https://www.imdb.com/title/${imdbId}/`);
+  if (movie.letterboxd_url) lines.push(`Letterboxd: ${movie.letterboxd_url}`);
+  if (movie.trailer_url) lines.push(`Trailer: ${movie.trailer_url}`);
+  if (movie.description) lines.push('', 'Synopsis:', clip(movie.description, 1500));
+  if (movie.notes) lines.push('', 'Notes:', clip(movie.notes, 1500));
+  const eps = (movie.featured_episodes || []).slice(0, 8);
+  if (eps.length) lines.push('', 'Highlighted episodes:', ...eps.map(e => `- ${e.title || 'Episode'}${e.season ? ` S${e.season}` : ''}${e.episode ? `E${e.episode}` : ''}`));
+  lines.push('', `Movies tools: cinequeue_get with id "${movie.id}" reads the card; cinequeue_update, cinequeue_bump, cinequeue_mark_watched change it (only on the owner's word).`);
+  const key = String(movie.id).replace(/[^A-Za-z0-9_-]/g, '-').slice(0, 120) || 'title';
+  return { id: 'title-' + key, title: `Movies: ${movie.title}${movie.year ? ` (${movie.year})` : ''}`.slice(0, 200), message: lines.join('\n').slice(0, 32000) };
+}
+function replyToMovie(movie, statusEl) {
+  const say = (text, tone) => { announce(text); if (statusEl) { statusEl.textContent = text; statusEl.className = `detail-reply-status ${tone}`; statusEl.hidden = false; } };
+  try {
+    const nav = window.WizardApp?.nav;
+    if (typeof nav?.openContextDraft !== 'function') throw new Error('Context draft unavailable');
+    const receipt = nav.openContextDraft(replyContext(movie));
+    if (receipt?.kind !== 'unsent-draft' || receipt.sent !== false) throw new Error('Could not confirm an unsent draft. Nothing was sent.');
+    say('Draft opened in Chats with this title attached. Nothing sent.', '');
+  } catch (error) {
+    say(error.message === 'Context draft unavailable' ? 'Reload Wizard (refresh the whole page) to turn on Reply. Nothing sent.' : (error.message || 'Could not open Chats. Nothing sent.'), 'error');
+  }
+}
+
 function openMovie(movieId, push = true, { preserveScroll = false, focusEventId = '', focusSelector = '' } = {}) {
   const priorScrollY = window.scrollY;
   const movie = movies.find(m => m.id === movieId);
@@ -1261,12 +1313,14 @@ function openMovie(movieId, push = true, { preserveScroll = false, focusEventId 
         </section>` : ''}
         <div class="detail-links">
           <button class="detail-share" type="button">Share movie</button>
+          ${canReply() ? '<button class="detail-reply" type="button" title="Start a chat with your agent about this title">Reply</button>' : ''}
           ${trailer}
           ${imdb}
           ${lb}
           ${bump}
           ${archiveButton}
         </div>
+        <p class="detail-reply-status" role="status" aria-live="polite" hidden></p>
         <section class="watch-section" aria-label="Watch status action">
           <div class="watch-action-copy">
             <b>${watchActionTitle}</b>
@@ -1284,6 +1338,7 @@ function openMovie(movieId, push = true, { preserveScroll = false, focusEventId 
     const result = await window.WizardApp?.share.text({ title:movie.title, text:`${movie.title}${movie.year ? ' (' + movie.year + ')' : ''}`, url:movie.imdb_url || movie.letterboxd_url || location.href });
     announce(result === 'shared' ? 'Shared' : result === 'copied' ? 'Copied' : result === 'cancelled' ? 'Share cancelled' : 'Sharing is unavailable');
   });
+  detail.querySelector('.detail-reply')?.addEventListener('click', () => replyToMovie(movie, detail.querySelector('.detail-reply-status')));
   detail.querySelector('.detail-watch').addEventListener('click', async (event) => {
     const button = event.currentTarget;
     if (button.disabled) return;
@@ -1471,7 +1526,7 @@ window.WizardApp?.back.register({
   canGoBack: () => Boolean(openMenu) || (!detail.classList.contains('hidden') && history.state?.cq !== 'movie'),
   back: () => { if (openMenu) closeMenu(); else returnToList(); return true; }
 });
-window.WizardApp?.ready({ name:'Movies' }).then(syncDraftHold);
+window.WizardApp?.ready({ name:'Movies', version:'0.3.2' }).then(syncDraftHold);
 const brandLink = document.querySelector('.brand');
 if (brandLink) brandLink.addEventListener('click', (event) => {
   event.preventDefault();
