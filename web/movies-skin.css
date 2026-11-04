@@ -427,3 +427,84 @@ input::placeholder, textarea::placeholder { color: color-mix(in srgb, var(--mv-t
   color: var(--mv-text);
   box-shadow: 0 10px 24px var(--mv-shade);
 }
+
+/* ── 0.3.1 friendliness pass (Miguel, 4 Nov 2026: friendly, intuitive, mobile first) ──
+   Phones: Unwatched | Watched | Add sit in a full-width thumb bar (equal cells, icon + label inline,
+   the selected cell a filled pill). Wide windows keep them above the list, Add beside the tabs (no longer
+   under full screen's "Exit full screen" pill). The row menu is always visible, targets are 44px on touch. */
+html[data-wz-hosted] .topbar { display: none; }
+.topbar {
+  background: var(--wz-panel, color-mix(in srgb, var(--mv-text) 8%, var(--wz-base, var(--mv-surface))));
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+.toolbar { grid-template-columns: minmax(0, 1fr) auto; }
+.toolbar-row { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.toolbar-row select { flex: 1 1 auto; min-width: 150px; }
+.filterbar { justify-content: flex-start; }
+.mv-bar { display: flex; align-items: center; gap: 8px; }
+.mv-ic { flex: none; width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+.filters button, .add-open { display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+.add-open { height: auto; min-height: 40px; border-radius: 999px; }
+
+/* Readable action labels: --mv-bg is transparent inside Wizard, which made "Mark watched" text invisible. */
+.detail-watch,
+.swipe-bg.watch { color: var(--wz-base, var(--mv-bg)); }
+
+/* The row menu is a visible control everywhere, not hover- or swipe-only. */
+.row-menu { color: var(--mv-text-3); }
+@media (min-width: 700px) {
+  .row-menu { opacity: 1; pointer-events: auto; width: 32px; height: 32px; min-height: 32px; }
+}
+@media (max-width: 699px) {
+  .row-menu {
+    position: static; width: 36px; height: 44px; min-height: 44px; margin-right: -6px;
+    overflow: visible; clip-path: none; white-space: normal;
+  }
+
+  .mv-bar {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 18;
+    display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px;
+    padding: 6px 8px;
+    border-top: 1px solid var(--mv-border);
+    background: var(--wz-panel, color-mix(in srgb, var(--mv-text) 8%, var(--wz-base, var(--mv-surface))));
+  }
+  html:not([data-wz-hosted]) .mv-bar { padding-bottom: calc(6px + env(safe-area-inset-bottom, 0px)); }
+  .filters { display: contents; }
+  .filters button,
+  .filters button.active,
+  .add-open {
+    width: 100%; min-width: 0; height: 44px; min-height: 44px; margin: 0; padding: 0 8px;
+    border: 0; border-radius: 999px; box-shadow: none;
+    font-size: var(--wz-text-md, .875rem); font-weight: 650; white-space: nowrap;
+    background: transparent; color: var(--mv-text-2);
+  }
+  .filters button span, .add-open span { overflow: hidden; text-overflow: ellipsis; }
+  .filters button.active { background: var(--mv-accent); color: var(--mv-accent-text); }
+  .add-open { color: var(--mv-accent-ink); }
+  .filterbar { margin: 0; }
+  .undo-bar { bottom: 68px; }
+  html:not([data-wz-hosted]) .undo-bar { bottom: calc(68px + env(safe-area-inset-bottom, 0px)); }
+}
+@media (max-width: 560px) {
+  .toolbar { grid-template-columns: 1fr; }
+}
+@media (pointer: coarse) {
+  .genre-chip, .chip, .back, .detail-links a, .detail-links button,
+  .viewtoggle button, .request-action, .request-choice, .add-request-close,
+  .row-menu-pop button, .watch-date-save, .watch-date-delete { min-height: 44px; }
+  .viewtoggle button { height: 44px; width: 44px; }
+}
+
+/* Empty states span the whole list (the poster grid squeezed them into one tile). */
+.list .empty { grid-column: 1 / -1; }
+/* Add sheet: Discard is the quiet choice, Add to queue the one filled button. */
+.add-request-actions #discardDraft { color: var(--mv-text-2); border-color: var(--mv-border); background: transparent; }
+@media (max-width: 699px) {
+  .filters button, .filters button.active, .add-open { gap: 4px; padding: 0 4px; font-size: var(--wz-text-sm, .8125rem); }
+}
+@media (pointer: coarse) {
+  input, select, textarea, .add-request-actions button { min-height: 44px; }
+}
+/* Full screen: the shell's "Exit full screen" pill sits top-right over the first row. */
+html[data-presentation="immersive"] main { padding-top: 52px; }

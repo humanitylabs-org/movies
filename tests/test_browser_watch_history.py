@@ -110,7 +110,8 @@ def test_watch_history_mobile_lifecycle():
             assert all(pair == ["1", "1"] for pair in opacities), opacities
             row_box = page.locator('.movie[data-movie-id="latest"]').bounding_box()
             rating_box = page.locator('.movie[data-movie-id="latest"] .rating-badge').bounding_box()
-            assert row_box and rating_box and row_box["x"] + row_box["width"] - (rating_box["x"] + rating_box["width"]) < 36
+            # The rating sits at the row's end, left of the always-visible ⋯ menu (0.3.1).
+            assert row_box and rating_box and row_box["x"] + row_box["width"] - (rating_box["x"] + rating_box["width"]) < 56
             assert page.locator('.movie[data-movie-id="latest"] .rating-badge').inner_text() == "IMDb 8.4"
             assert page.locator('.movie[data-movie-id="oldest"] .rating-badge').inner_text() == ""
             page.screenshot(path=str(SCREENSHOT), full_page=True)

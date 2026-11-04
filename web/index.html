@@ -16,8 +16,8 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" href="icon.svg" type="image/svg+xml" />
   <link rel="apple-touch-icon" href="apple-touch-icon.png" />
-  <link rel="stylesheet" href="styles.css?v=0.2.2" />
-  <link rel="stylesheet" href="movies-skin.css?v=0.2.2" />
+  <link rel="stylesheet" href="styles.css?v=0.3.1" />
+  <link rel="stylesheet" href="movies-skin.css?v=0.3.1" />
   <script src="boot.js"></script>
   <script src="/wizard-os-home/core/app-client.js"></script>
 </head>
@@ -30,9 +30,6 @@
       </a>
       <p id="brandMeta" class="brand-meta">Queue</p>
 
-      <button id="addOpen" class="add-open" type="button" aria-haspopup="dialog" aria-controls="addRequestPanel">
-        <span class="add-open-glyph" aria-hidden="true">+</span> Add
-      </button>
     </div>
   </header>
 
@@ -42,29 +39,36 @@
         <span class="search-icon" aria-hidden="true">⌕</span>
         <input id="search" type="search" placeholder="Search title, year, genre, director, actor…" autocomplete="off" />
       </div>
-      <select id="sort" aria-label="Sort movies">
-        <option value="queue-order">Queue order</option>
-        <option value="watched-date" hidden>Recently watched</option>
-        <option value="date-added">Date added</option>
-        <option value="title">Title</option>
-        <option value="year-desc">Year ↓</option>
-        <option value="year-asc">Year ↑</option>
-      </select>
+      <div class="toolbar-row">
+        <select id="sort" aria-label="Sort movies">
+          <option value="queue-order">Queue order</option>
+          <option value="watched-date" hidden>Recently watched</option>
+          <option value="date-added">Date added</option>
+          <option value="title">Title</option>
+          <option value="year-desc">Year ↓</option>
+          <option value="year-asc">Year ↑</option>
+        </select>
+        <div class="viewtoggle" role="group" aria-label="Layout">
+          <button type="button" data-view="list" aria-label="List view" aria-pressed="true">
+            <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M2 3.5h12M2 8h12M2 12.5h12"/></svg>
+          </button>
+          <button type="button" data-view="grid" aria-label="Poster view" aria-pressed="false">
+            <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2" y="2" width="5" height="5" rx="1"/><rect x="9" y="2" width="5" height="5" rx="1"/><rect x="2" y="9" width="5" height="5" rx="1"/><rect x="9" y="9" width="5" height="5" rx="1"/></svg>
+          </button>
+        </div>
+      </div>
     </section>
 
     <section id="genreChips" class="genre-chips" aria-label="Filter by genre"></section>
 
     <div class="filterbar">
-      <nav class="filters" aria-label="Watch status">
-        <button class="active" data-filter="unwatched" type="button">Unwatched</button>
-        <button data-filter="watched" type="button">Watched</button>
-      </nav>
-      <div class="viewtoggle" role="group" aria-label="Layout">
-        <button type="button" data-view="list" aria-label="List view" aria-pressed="true">
-          <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M2 3.5h12M2 8h12M2 12.5h12"/></svg>
-        </button>
-        <button type="button" data-view="grid" aria-label="Poster view" aria-pressed="false">
-          <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2" y="2" width="5" height="5" rx="1"/><rect x="9" y="2" width="5" height="5" rx="1"/><rect x="2" y="9" width="5" height="5" rx="1"/><rect x="9" y="9" width="5" height="5" rx="1"/></svg>
+      <div class="mv-bar">
+        <nav class="filters" aria-label="Watch status">
+          <button class="active" data-filter="unwatched" type="button"><svg class="mv-ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="14" rx="2.5"/><path d="M10.2 9.4v5.2l4.4-2.6z"/></svg><span>Unwatched</span></button>
+          <button data-filter="watched" type="button"><svg class="mv-ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M8.3 12.3l2.5 2.5 4.9-5"/></svg><span>Watched</span></button>
+        </nav>
+        <button id="addOpen" class="add-open" type="button" aria-haspopup="dialog" aria-controls="addRequestPanel">
+          <svg class="mv-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span>Add</span>
         </button>
       </div>
     </div>
@@ -124,6 +128,6 @@
     </article>
   </template>
 
-  <script src="app.js?v=0.2.2"></script>
+  <script src="app.js?v=0.3.1"></script>
 </body>
 </html>

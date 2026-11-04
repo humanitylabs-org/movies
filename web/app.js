@@ -641,6 +641,10 @@ function openRowMenu(row, movie) {
   pop.style.top = `${Math.round(rect.bottom + 4)}px`;
   pop.style.right = `${Math.round(window.innerWidth - rect.right)}px`;
   document.querySelector('#menuLayer').append(pop);
+  // Near the bottom (thumb bar on phones) the menu opens upward so every item stays reachable.
+  const bar = document.querySelector('.mv-bar');
+  const floor = bar && getComputedStyle(bar).position === 'fixed' ? bar.getBoundingClientRect().top : window.innerHeight;
+  if (rect.bottom + 4 + pop.offsetHeight > floor - 8) pop.style.top = `${Math.max(8, Math.round(rect.top - 4 - pop.offsetHeight))}px`;
   button.setAttribute('aria-expanded', 'true');
   openMenu = { pop, button, row };
 }
@@ -1393,7 +1397,11 @@ function render() {
   if (!shown.length) {
     const empty = document.createElement('div');
     empty.className = 'empty';
-    empty.textContent = movies.length ? 'No matching films.' : 'No movies yet.';
+    const narrowed = searchEl.value.trim() || selectedGenres.size;
+    empty.textContent = !movies.length ? 'No movies yet.'
+      : narrowed ? 'No matching films.'
+        : filter === 'watched' ? 'Nothing watched yet. Films you mark watched land here.'
+          : 'Your queue is empty. Tap Add to put a film in it.';
     list.append(empty);
     return;
   }
