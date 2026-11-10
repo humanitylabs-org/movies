@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Movies",
-    "version": "0.2.2",
+    "version": "0.3.1",
     "description": "Private watch queue. Writes from browsers must be same-origin (or a configured origin) and JSON."
   },
   "servers": [
@@ -677,6 +677,82 @@
                 "type": "object"
               }
             }
+          }
+        }
+      }
+    },
+    "/api/switches": {
+      "get": {
+        "summary": "Owner feature switches (wizard.app-switches/1); every switch is off by default",
+        "responses": {
+          "200": {
+            "description": "Switch listing",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Flip one switch. Needs X-Wizard-Switch: 1, the Wizard's own Origin and JSON {\"id\", \"on\"}",
+        "parameters": [
+          {
+            "name": "X-Wizard-Switch",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "1"
+              ]
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "id",
+                  "on"
+                ],
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "on": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Switch listing",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad body"
+          },
+          "403": {
+            "description": "Not the owner"
+          },
+          "404": {
+            "description": "Unknown switch"
           }
         }
       }
