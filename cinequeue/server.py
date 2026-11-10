@@ -20,7 +20,7 @@ from urllib.parse import parse_qs, unquote, urlparse, urlsplit
 from cinequeue.core import MovieStore, WatchStateConflict, parse_movie_requests
 from cinequeue.watch_providers import WatchProviderError, WatchProviderService, configured_region, region_name
 
-VERSION = "0.3.1"
+VERSION = "0.3.2"
 ROOT = Path(__file__).resolve().parents[1]
 STATIC = ROOT / "web"
 # Owner state lives in one writable directory: the packaged app mounts ${APP_DATA_DIR}/data at /data.
@@ -146,6 +146,14 @@ SWITCHES = [
         "lists say what to do.",
         "default": False,
         "issues": ["humanitylabs-org/movies#14"],
+    },
+    {
+        "id": "reply",
+        "name": "Reply on a title",
+        "description": "A Reply button on a title's card (next to Share movie) opens a new, unsent Wizard Chats draft with "
+        "that title attached, so you can start a chat with your agent about it. Movies never sends anything.",
+        "default": False,
+        "issues": ["humanitylabs-org/movies#15"],
     },
 ]
 

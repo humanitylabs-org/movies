@@ -630,6 +630,8 @@ button:disabled { cursor: default; }
   font-size: 13px;
 }
 .detail-archive { color: var(--muted); }
+.detail-reply-status { margin: 10px 0 0; font-size: var(--wz-text-sm, .8125rem); color: var(--wz-text-secondary, var(--muted)); }
+.detail-reply-status.error { color: var(--wz-danger, currentColor); }
 @media (hover: hover) {
   .detail-archive:hover { color: #ff8f7a; border-color: rgba(255,143,122,.45); }
 }
