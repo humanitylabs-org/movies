@@ -641,6 +641,10 @@ function openRowMenu(row, movie) {
   pop.style.top = `${Math.round(rect.bottom + 4)}px`;
   pop.style.right = `${Math.round(window.innerWidth - rect.right)}px`;
   document.querySelector('#menuLayer').append(pop);
+  // friendly-phone switch: near the bottom (thumb bar on phones) the menu opens upward so every item stays reachable.
+  const bar = friendlyOn() ? document.querySelector('.mv-bar') : null;
+  const floor = bar && getComputedStyle(bar).position === 'fixed' ? bar.getBoundingClientRect().top : window.innerHeight;
+  if (bar && rect.bottom + 4 + pop.offsetHeight > floor - 8) pop.style.top = `${Math.max(8, Math.round(rect.top - 4 - pop.offsetHeight))}px`;
   button.setAttribute('aria-expanded', 'true');
   openMenu = { pop, button, row };
 }
@@ -1393,7 +1397,11 @@ function render() {
   if (!shown.length) {
     const empty = document.createElement('div');
     empty.className = 'empty';
-    empty.textContent = movies.length ? 'No matching films.' : 'No movies yet.';
+    const narrowed = searchEl.value.trim() || selectedGenres.size;
+    empty.textContent = !movies.length ? 'No movies yet.'
+      : narrowed || !friendlyOn() ? 'No matching films.'
+        : filter === 'watched' ? 'Nothing watched yet. Films you mark watched land here.'
+          : 'Your queue is empty. Tap Add to put a film in it.';
     list.append(empty);
     return;
   }
@@ -1477,6 +1485,72 @@ if (brandLink) brandLink.addEventListener('click', (event) => {
   event.preventDefault();
   returnToList();
 });
+// Owner feature switches (wizard.app-switches/1): state lives on the box, read at start and whenever the page
+// becomes visible again, because the owner may flip one from the Tracker's Try it.
+let appSwitches = {};
+function friendlyOn() { return appSwitches['friendly-phone'] === true; }
+const FRIENDLY_ICONS = {
+  unwatched: '<svg class="mv-ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="14" rx="2.5"/><path d="M10.2 9.4v5.2l4.4-2.6z"/></svg>',
+  watched: '<svg class="mv-ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M8.3 12.3l2.5 2.5 4.9-5"/></svg>',
+  add: '<svg class="mv-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>',
+};
+const friendlyHome = {};
+// friendly-phone: Unwatched | Watched | Add share one bar (a bottom thumb bar on phones), sort and layout share a row.
+// Off restores the original markup exactly, so turning the switch back off needs no reload.
+function applyFriendly(on) {
+  const root = document.documentElement;
+  const toolbar = document.querySelector('.toolbar');
+  const filterbar = document.querySelector('.filterbar');
+  const filters = filterbar?.querySelector('.filters') || document.querySelector('.filters');
+  const toggle = document.querySelector('.viewtoggle');
+  if (!toolbar || !filterbar || !filters || !toggle || !addOpen || !sortEl) return;
+  if (!friendlyHome.add) {
+    friendlyHome.add = { parent: addOpen.parentNode, next: addOpen.nextSibling, html: addOpen.innerHTML };
+    friendlyHome.labels = [...filters.querySelectorAll('[data-filter]')].map(b => [b, b.innerHTML]);
+  }
+  if (on && !root.hasAttribute('data-mv-friendly')) {
+    root.setAttribute('data-mv-friendly', '');
+    const row = document.createElement('div');
+    row.className = 'toolbar-row';
+    sortEl.replaceWith(row);
+    row.append(sortEl, toggle);
+    const bar = document.createElement('div');
+    bar.className = 'mv-bar';
+    filters.replaceWith(bar);
+    bar.append(filters, addOpen);
+    for (const [b] of friendlyHome.labels) {
+      const label = b.textContent.trim();
+      b.innerHTML = `${FRIENDLY_ICONS[b.dataset.filter] || ''}<span></span>`;
+      b.querySelector('span').textContent = label;
+    }
+    addOpen.innerHTML = `${FRIENDLY_ICONS.add}<span>Add</span>`;
+  } else if (!on && root.hasAttribute('data-mv-friendly')) {
+    root.removeAttribute('data-mv-friendly');
+    const row = toolbar.querySelector('.toolbar-row');
+    const bar = filterbar.querySelector('.mv-bar');
+    if (row) { row.replaceWith(sortEl); }
+    filterbar.append(toggle);
+    if (bar) { bar.replaceWith(filters); filterbar.prepend(filters); }
+    friendlyHome.add.parent.insertBefore(addOpen, friendlyHome.add.next);
+    addOpen.innerHTML = friendlyHome.add.html;
+    for (const [b, html] of friendlyHome.labels) b.innerHTML = html;
+  }
+}
+async function loadSwitches() {
+  try {
+    const res = await fetch(base('/api/switches'), { headers: { Accept: 'application/json' } });
+    const data = res.ok ? await res.json() : {};
+    const next = {};
+    for (const s of Array.isArray(data.switches) ? data.switches : []) if (s && typeof s.id === 'string') next[s.id] = s.on === true;
+    const changed = next['friendly-phone'] !== appSwitches['friendly-phone'];
+    appSwitches = next;
+    applyFriendly(friendlyOn());
+    if (changed && movies.length) render();
+  } catch (error) {
+    console.warn('Movies switches unavailable; new features stay off', error?.name || 'Error');
+  }
+}
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') loadSwitches(); });
 async function loadConfig() {
   try {
     const data = await api('/api/config');
@@ -1486,7 +1560,7 @@ async function loadConfig() {
   }
   syncAddMode();
 }
-loadConfig().then(async () => { await loadMovies(); await refreshRequests(); }).catch(error => {
+Promise.all([loadConfig(), loadSwitches()]).then(async () => { await loadMovies(); await refreshRequests(); }).catch(error => {
   list.innerHTML = '<div class="empty">Could not load movies.</div>';
   console.error(error);
 });

@@ -63,6 +63,16 @@ Disabled admission explicitly offers simple cards instead, never claims enrichme
 New installs seed Batman Begins (2005) once; an existing queue, including intentional `[]`,
 is never reset. No owner queue, history or requests are included in the images.
 
+## Feature switches
+
+New features ship off by default behind owner switches (`wizard.app-switches/1`, wizard-os `docs/APP_SWITCHES.md`).
+State lives on the box in `CINEQUEUE_DATA/switches.json`; `GET /api/switches` lists them and `POST /api/switches`
+(`X-Wizard-Switch: 1`, JSON `{"id", "on"}`) flips one, so the Tracker's Try it toggle works through the App Manager.
+
+| Switch | Issue | What it changes |
+|---|---|---|
+| `friendly-phone` | movies#14 | Unwatched / Watched / Add in a bottom thumb bar on phones (beside the tabs on wide windows), always-visible row menu, readable Mark watched, 44 px touch targets, helpful empty states. |
+
 ## Test
 
 ```bash

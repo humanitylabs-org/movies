@@ -20,13 +20,14 @@ from urllib.parse import parse_qs, unquote, urlparse, urlsplit
 from cinequeue.core import MovieStore, WatchStateConflict, parse_movie_requests
 from cinequeue.watch_providers import WatchProviderError, WatchProviderService, configured_region, region_name
 
-VERSION = "0.3.0"
+VERSION = "0.3.1"
 ROOT = Path(__file__).resolve().parents[1]
 STATIC = ROOT / "web"
 # Owner state lives in one writable directory: the packaged app mounts ${APP_DATA_DIR}/data at /data.
 DATA_DIR = Path(os.environ.get("CINEQUEUE_DATA") or ROOT / "data")
 DATA = DATA_DIR / "movies.json"
 ADD_REQUESTS = DATA_DIR / "add_requests.json"
+SWITCHES_FILE = DATA_DIR / "switches.json"
 BASE_PATH = os.environ.get("CINEQUEUE_BASE_PATH", "/cinequeue").rstrip("/")
 WATCH_PROVIDERS = WatchProviderService()
 # Optional Wizard Agent Service integration for "find and fill in this film" requests.
@@ -132,6 +133,52 @@ def lock_add_requests(path: Path | str = ADD_REQUESTS):
             yield
         finally:
             fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+
+
+# Owner feature switches (wizard.app-switches/1, wizard-os docs/APP_SWITCHES.md). Off by default; the state lives on
+# the box in DATA_DIR/switches.json, so the app, the Tracker's Try it (through the App Manager) and the agent see one state.
+SWITCHES = [
+    {
+        "id": "friendly-phone",
+        "name": "Friendlier phone controls",
+        "description": "Unwatched, Watched and Add move to a thumb bar at the bottom on phones (beside the tabs on wide "
+        "windows), the row menu is always visible, Mark watched is readable, touch targets are 44 px and empty "
+        "lists say what to do.",
+        "default": False,
+        "issues": ["humanitylabs-org/movies#14"],
+    },
+]
+
+
+def _saved_switches(path: Path | str | None = None) -> dict:
+    try:
+        saved = json.loads(Path(path or SWITCHES_FILE).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    return saved if isinstance(saved, dict) else {}
+
+
+def switches_doc(path: Path | str | None = None) -> dict:
+    saved = _saved_switches(path)
+    return {
+        "contract": "wizard.app-switches/1",
+        "switches": [
+            dict(s, on=saved[s["id"]] if isinstance(saved.get(s["id"]), bool) else s["default"]) for s in SWITCHES
+        ],
+    }
+
+
+def set_switch(switch_id: str, on: bool, path: Path | str | None = None) -> dict:
+    target = Path(path or SWITCHES_FILE)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    known = {s["id"] for s in SWITCHES}
+    with lock_add_requests(target):
+        saved = {k: v for k, v in _saved_switches(target).items() if k in known and isinstance(v, bool)}
+        saved[switch_id] = bool(on)
+        tmp = target.with_suffix(target.suffix + ".tmp")
+        tmp.write_text(json.dumps(saved, indent=2), encoding="utf-8")
+        tmp.replace(target)
+    return switches_doc(target)
 
 
 def build_cinequeue_add_prompt(text: str) -> str:
@@ -455,6 +502,10 @@ class CineQueueHandler(SimpleHTTPRequestHandler):
                 return self._json({"error": "Wizard shared interface is temporarily unavailable"}, HTTPStatus.SERVICE_UNAVAILABLE)
         if clean_path == "/api/config":
             return self._json(public_config())
+        if clean_path == "/api/switches":
+            if self.headers.get("Sec-Fetch-Site", "") == "cross-site":
+                return self._json({"error": "Only this Wizard's owner can see Movies switches."}, HTTPStatus.FORBIDDEN)
+            return self._json(switches_doc())
         if clean_path == "/api/history":
             limit = parse_qs(parsed.query).get("limit", ["100"])[0]
             return self._json({"history": watch_history_feed(int(limit) if limit.isdigit() else 100)})
@@ -544,6 +595,8 @@ class CineQueueHandler(SimpleHTTPRequestHandler):
             return self._json({"error": "invalid JSON"}, HTTPStatus.BAD_REQUEST)
 
     def _post(self, clean_path: str) -> None:
+        if clean_path == "/api/switches":
+            return self._post_switch()
         if clean_path == "/mcp":
             from cinequeue import mcp_api
 
@@ -690,6 +743,19 @@ class CineQueueHandler(SimpleHTTPRequestHandler):
             self.store.delete(movie_id)
             return self._json({"ok": True})
         return self._json({"error": "not found"}, HTTPStatus.NOT_FOUND)
+
+    def _post_switch(self) -> None:
+        # Owner only (same Host/Origin trust as every Movies write), with X-Wizard-Switch: 1 and a JSON body.
+        if self.headers.get("X-Wizard-Switch") != "1":
+            return self._json({"error": "Only this Wizard's owner can switch Movies."}, HTTPStatus.FORBIDDEN)
+        if self.headers.get("Content-Type", "").split(";")[0].strip().lower() != "application/json":
+            return self._json({"error": "application/json required"}, HTTPStatus.BAD_REQUEST)
+        body = self._read_json()
+        if not isinstance(body.get("id"), str) or not isinstance(body.get("on"), bool):
+            return self._json({"error": "body must be {\"id\": \"...\", \"on\": true|false}"}, HTTPStatus.BAD_REQUEST)
+        if body["id"] not in {s["id"] for s in SWITCHES}:
+            return self._json({"error": "No such switch"}, HTTPStatus.NOT_FOUND)
+        return self._json(set_switch(body["id"], body["on"]))
 
     def _redirect_to_trailing_slash(self, parsed) -> None:
         target = f"{BASE_PATH}/"

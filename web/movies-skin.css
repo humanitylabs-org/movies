@@ -427,3 +427,83 @@ input::placeholder, textarea::placeholder { color: color-mix(in srgb, var(--mv-t
   color: var(--mv-text);
   box-shadow: 0 10px 24px var(--mv-shade);
 }
+
+/* ── friendly-phone switch (movies#14; off by default, flipped from the Tracker's Try it) ──
+   Phones: Unwatched | Watched | Add sit in a full-width thumb bar (equal cells, icon + label inline, the selected cell
+   a filled pill). Wide windows keep them above the list, Add beside the tabs (no longer under full screen's
+   "Exit full screen" pill). The row menu is always visible, targets are 44px on touch. Every rule is scoped to
+   html[data-mv-friendly], which web/app.js sets only while the switch is on. Work from PR #12 (Oscar). */
+html[data-mv-friendly][data-wz-hosted] .topbar { display: none; }
+html[data-mv-friendly] .topbar {
+  background: var(--wz-panel, color-mix(in srgb, var(--mv-text) 8%, var(--wz-base, var(--mv-surface))));
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+html[data-mv-friendly] .toolbar { grid-template-columns: minmax(0, 1fr) auto; }
+html[data-mv-friendly] .toolbar-row { display: flex; align-items: center; gap: 8px; min-width: 0; }
+html[data-mv-friendly] .toolbar-row select { flex: 1 1 auto; min-width: 150px; }
+html[data-mv-friendly] .filterbar { justify-content: flex-start; }
+html[data-mv-friendly] .mv-bar { display: flex; align-items: center; gap: 8px; }
+html[data-mv-friendly] .mv-ic { flex: none; width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+html[data-mv-friendly] .filters button,
+html[data-mv-friendly] .add-open { display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+html[data-mv-friendly] .add-open { height: auto; min-height: 40px; border-radius: 999px; }
+
+/* Readable action labels: --mv-bg is transparent inside Wizard, which made "Mark watched" text invisible. */
+html[data-mv-friendly] .detail-watch,
+html[data-mv-friendly] .swipe-bg.watch { color: var(--wz-base, var(--mv-bg)); }
+
+/* The row menu is a visible control everywhere, not hover- or swipe-only. */
+html[data-mv-friendly] .row-menu { color: var(--mv-text-3); }
+@media (min-width: 700px) {
+  html[data-mv-friendly] .row-menu { opacity: 1; pointer-events: auto; width: 32px; height: 32px; min-height: 32px; }
+}
+@media (max-width: 699px) {
+  html[data-mv-friendly] .row-menu {
+    position: static; width: 36px; height: 44px; min-height: 44px; margin-right: -6px;
+    overflow: visible; clip-path: none; white-space: normal;
+  }
+
+  html[data-mv-friendly] .mv-bar {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 18;
+    display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px;
+    padding: 6px 8px;
+    border-top: 1px solid var(--mv-border);
+    background: var(--wz-panel, color-mix(in srgb, var(--mv-text) 8%, var(--wz-base, var(--mv-surface))));
+  }
+  html[data-mv-friendly]:not([data-wz-hosted]) .mv-bar { padding-bottom: calc(6px + env(safe-area-inset-bottom, 0px)); }
+  html[data-mv-friendly] .filters { display: contents; }
+  html[data-mv-friendly] .filters button,
+  html[data-mv-friendly] .filters button.active,
+  html[data-mv-friendly] .add-open {
+    width: 100%; min-width: 0; height: 44px; min-height: 44px; margin: 0; padding: 0 4px; gap: 4px;
+    border: 0; border-radius: 999px; box-shadow: none;
+    font-size: var(--wz-text-sm, .8125rem); font-weight: 650; white-space: nowrap;
+    background: transparent; color: var(--mv-text-2);
+  }
+  html[data-mv-friendly] .filters button span,
+  html[data-mv-friendly] .add-open span { overflow: hidden; text-overflow: ellipsis; }
+  html[data-mv-friendly] .filters button.active { background: var(--mv-accent); color: var(--mv-accent-text); }
+  html[data-mv-friendly] .add-open { color: var(--mv-accent-ink); }
+  html[data-mv-friendly] .filterbar { margin: 0; }
+  html[data-mv-friendly] main { padding-bottom: 68px; }
+  html[data-mv-friendly] .undo-bar { bottom: 68px; }
+  html[data-mv-friendly]:not([data-wz-hosted]) .undo-bar { bottom: calc(68px + env(safe-area-inset-bottom, 0px)); }
+}
+@media (max-width: 560px) {
+  html[data-mv-friendly] .toolbar { grid-template-columns: 1fr; }
+}
+@media (pointer: coarse) {
+  html[data-mv-friendly] :is(.genre-chip, .chip, .back, .detail-links a, .detail-links button,
+  .viewtoggle button, .request-action, .request-choice, .add-request-close,
+  .row-menu-pop button, .watch-date-save, .watch-date-delete,
+  input, select, textarea, .add-request-actions button) { min-height: 44px; }
+  html[data-mv-friendly] .viewtoggle button { height: 44px; width: 44px; }
+}
+
+/* Empty states span the whole list (the poster grid squeezed them into one tile). */
+html[data-mv-friendly] .list .empty { grid-column: 1 / -1; }
+/* Add sheet: Discard is the quiet choice, Add to queue the one filled button. */
+html[data-mv-friendly] .add-request-actions #discardDraft { color: var(--mv-text-2); border-color: var(--mv-border); background: transparent; }
+/* Full screen: the shell's "Exit full screen" pill sits top-right over the first row. */
+html[data-mv-friendly][data-presentation="immersive"] main { padding-top: 52px; }

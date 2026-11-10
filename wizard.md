@@ -6,7 +6,7 @@ name: Movies
 type: view
 category: app
 voice_names: ["cine queue", "cinequeue", "movies"]
-version: 0.3.0
+version: 0.3.1
 summary: Private movie and series watch queue with watch history, notes, documented API and MCP.
 license: MIT
 source: .
@@ -37,6 +37,9 @@ system: false
 uses: []
 needs: []
 health: /healthz
+switches:
+  contract: wizard.app-switches/1
+  path: /api/switches
 ---
 
 # Movies
