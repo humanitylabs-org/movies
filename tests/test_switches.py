@@ -114,3 +114,19 @@ def test_friendly_css_is_scoped_to_the_switch():
     for group in groups:
         for selector in _top_level_split(group):
             assert selector.strip().startswith("html[data-mv-friendly]"), selector
+
+
+def test_reply_switch_is_off_by_default_linked_and_flippable(base, tmp_path):
+    reply = {s["id"]: s for s in call(f"{base}/api/switches")[1]["switches"]}["reply"]
+    assert reply["on"] is False and reply["default"] is False
+    assert reply["issues"] == ["humanitylabs-org/movies#15"]
+    assert reply["name"] and reply["description"]
+    status, doc = flip(base, "reply", True)
+    assert status == 200 and {s["id"]: s["on"] for s in doc["switches"]}["reply"] is True
+    assert json.loads((tmp_path / "switches.json").read_text()) == {"reply": True}
+
+
+def test_reply_button_is_gated_by_the_switch():
+    app = (ROOT / "web" / "app.js").read_text(encoding="utf-8")
+    assert "const canReply = () => appSwitches.reply === true && typeof window.WizardApp?.nav?.openContextDraft === 'function';" in app
+    assert "${canReply() ? '<button class=\"detail-reply\"" in app
