@@ -1162,7 +1162,13 @@ async function loadWhereToWatch(movie) {
 // Every fact is already in the view, so the tap calls the shell synchronously (user activation). Older Wizard
 // shells have no openContextDraft: Reply just is not shown. Movies never sends anything.
 // Behind the owner switch `reply` (off by default, movies#15).
-const canReply = () => appSwitches.reply === true && typeof window.WizardApp?.nav?.openContextDraft === 'function';
+// The draft needs Movies open INSIDE Wizard (WizardApp.hosted). app-client always defines openContextDraft, so on
+// its own (a browser tab or a home-screen icon) Reply used to show and fail with the shell's raw "Context drafts
+// need the verified Wizard host". There it now says how to reply instead (movies#15 kick-back).
+const replyHosted = () => window.WizardApp?.hosted === true && typeof window.WizardApp?.nav?.openContextDraft === 'function';
+const onItsOwn = () => { try { return window.parent === window; } catch (_) { return false; } };
+const canReply = () => appSwitches.reply === true && (replyHosted() || onItsOwn());
+const REPLY_OUTSIDE = 'Reply works when Movies is open inside Wizard. Open Movies from your Wizard, then tap Reply. Nothing sent.';
 function clip(text, limit) {
   text = String(text || '').trim();
   if (text.length <= limit) return text;
@@ -1202,12 +1208,16 @@ function replyToMovie(movie, statusEl) {
   const say = (text, tone) => { announce(text); if (statusEl) { statusEl.textContent = text; statusEl.className = `detail-reply-status ${tone}`; statusEl.hidden = false; } };
   try {
     const nav = window.WizardApp?.nav;
+    if (!replyHosted() && onItsOwn()) { say(REPLY_OUTSIDE, ''); return; }
     if (typeof nav?.openContextDraft !== 'function') throw new Error('Context draft unavailable');
     const receipt = nav.openContextDraft(replyContext(movie));
     if (receipt?.kind !== 'unsent-draft' || receipt.sent !== false) throw new Error('Could not confirm an unsent draft. Nothing was sent.');
     say('Draft opened in Chats with this title attached. Nothing sent.', '');
   } catch (error) {
-    say(error.message === 'Context draft unavailable' ? 'Reload Wizard (refresh the whole page) to turn on Reply. Nothing sent.' : (error.message || 'Could not open Chats. Nothing sent.'), 'error');
+    const msg = String(error?.message || '');
+    say(msg === 'Context draft unavailable' ? 'Reload Wizard (refresh the whole page) to turn on Reply. Nothing sent.'
+      : /verified Wizard host/i.test(msg) ? REPLY_OUTSIDE
+      : (msg || 'Could not open Chats. Nothing sent.'), 'error');
   }
 }
 
@@ -1535,7 +1545,7 @@ window.WizardApp?.back.register({
   canGoBack: () => Boolean(openMenu) || (!detail.classList.contains('hidden') && history.state?.cq !== 'movie'),
   back: () => { if (openMenu) closeMenu(); else returnToList(); return true; }
 });
-window.WizardApp?.ready({ name:'Movies', version:'0.3.2' }).then(syncDraftHold);
+window.WizardApp?.ready({ name:'Movies', version:'0.3.3' }).then(syncDraftHold);
 const brandLink = document.querySelector('.brand');
 if (brandLink) brandLink.addEventListener('click', (event) => {
   event.preventDefault();

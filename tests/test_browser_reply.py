@@ -27,6 +27,7 @@ SHOTS = Path(os.environ.get("CQ_SHOTS") or tempfile.gettempdir())
 FAKE_CLIENT = """
 window.__drafts = []; window.__sends = [];
 window.WizardApp = {
+  hosted: !window.__onItsOwn,
   ready: () => Promise.resolve({}),
   back: { register() {}, useHistory() {} },
   share: { text: async () => 'copied' },
@@ -117,6 +118,19 @@ def test_reply_switch_gates_the_button_and_only_opens_an_unsent_draft():
             assert page.evaluate("window.__sends") == []
             assert writes == [], writes  # the tap itself makes no request at all
             page.screenshot(path=str(SHOTS / "cq-reply-on.png"))
+            assert not errors, errors
+
+            # On its own (no Wizard around it, like a browser tab or home-screen icon): Reply explains what to do
+            # instead of the shell's raw "Context drafts need the verified Wizard host" (movies#15 kick-back).
+            page.add_init_script("window.__onItsOwn = true")
+            open_card(page)
+            assert page.evaluate("window.WizardApp.hosted") is False
+            page.get_by_role("button", name="Reply", exact=True).click()
+            assert status.inner_text() == ("Reply works when Movies is open inside Wizard. "
+                                           "Open Movies from your Wizard, then tap Reply. Nothing sent.")
+            assert page.evaluate("window.__drafts") == [] and page.evaluate("window.__sends") == []
+            assert writes == [], writes
+            page.screenshot(path=str(SHOTS / "cq-reply-on-its-own.png"))
             assert not errors, errors
             browser.close()
     finally:

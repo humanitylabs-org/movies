@@ -20,7 +20,7 @@ from urllib.parse import parse_qs, unquote, urlparse, urlsplit
 from cinequeue.core import MovieStore, WatchStateConflict, parse_movie_requests
 from cinequeue.watch_providers import WatchProviderError, WatchProviderService, configured_region, region_name
 
-VERSION = "0.3.2"
+VERSION = "0.3.3"
 ROOT = Path(__file__).resolve().parents[1]
 STATIC = ROOT / "web"
 # Owner state lives in one writable directory: the packaged app mounts ${APP_DATA_DIR}/data at /data.
