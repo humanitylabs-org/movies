@@ -6,7 +6,7 @@ name: Movies
 type: view
 category: app
 voice_names: ["cine queue", "cinequeue", "movies"]
-version: 0.3.4
+version: 0.3.5
 summary: Private movie and series watch queue with watch history, notes, documented API and MCP.
 license: MIT
 source: .

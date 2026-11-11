@@ -125,3 +125,41 @@ def test_removed_switches_are_gone_and_their_saved_values_pruned(tmp_path):
     assert json.loads(saved.read_text()) == {"friendly-phone": True}
     server.prune_switches(tmp_path / "missing.json")
     assert not (tmp_path / "missing.json").exists()
+
+
+def _failing_second_read(monkeypatch, target, fault):
+    original_read = Path.read_text
+    reads = {"n": 0}
+
+    def read_text(path, *args, **kwargs):
+        if path == target:
+            reads["n"] += 1
+            if reads["n"] == 2:
+                if fault == "oserror":
+                    raise OSError("synthetic transient read fault")
+                return "{not json"
+        return original_read(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "read_text", read_text)
+    return reads
+
+
+@pytest.mark.parametrize("fault", ["oserror", "parse"])
+def test_prune_leaves_settings_untouched_when_locked_read_fails(monkeypatch, tmp_path, fault):
+    # movies#21: healthy first read sees the removed `reply`, the locked read fails; the owner's file must survive.
+    target = tmp_path / "switches.json"
+    original = json.dumps({"reply": True, "friendly-phone": True}).encode()
+    target.write_bytes(original)
+    reads = _failing_second_read(monkeypatch, target, fault)
+    server.prune_switches(target)
+    assert reads["n"] == 2
+    assert target.read_bytes() == original
+    assert not (tmp_path / "switches.json.tmp").exists()
+
+
+@pytest.mark.parametrize("value", [True, False])
+def test_healthy_prune_keeps_both_friendly_choices(tmp_path, value):
+    target = tmp_path / "switches.json"
+    target.write_text(json.dumps({"reply": True, "friendly-phone": value}))
+    server.prune_switches(target)
+    assert json.loads(target.read_text()) == {"friendly-phone": value}
