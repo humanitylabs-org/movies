@@ -20,7 +20,7 @@ from urllib.parse import parse_qs, unquote, urlparse, urlsplit
 from cinequeue.core import MovieStore, WatchStateConflict, parse_movie_requests
 from cinequeue.watch_providers import WatchProviderError, WatchProviderService, configured_region, region_name
 
-VERSION = "0.3.4"
+VERSION = "0.3.5"
 ROOT = Path(__file__).resolve().parents[1]
 STATIC = ROOT / "web"
 # Owner state lives in one writable directory: the packaged app mounts ${APP_DATA_DIR}/data at /data.
@@ -189,7 +189,17 @@ def prune_switches(path: Path | str | None = None) -> None:
     if not saved or set(saved) <= known:
         return
     with lock_add_requests(target):
-        kept = {k: v for k, v in _saved_switches(target).items() if k in known and isinstance(v, bool)}
+        # movies#21: read strictly under the lock. If the file cannot be read or parsed now, leave it exactly as it
+        # is; publishing the `{}` fallback here would wipe the owner's surviving choices.
+        try:
+            current = json.loads(target.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            return
+        if not isinstance(current, dict):
+            return
+        kept = {k: v for k, v in current.items() if k in known and isinstance(v, bool)}
+        if kept == current:
+            return
         tmp = target.with_suffix(target.suffix + ".tmp")
         tmp.write_text(json.dumps(kept, indent=2), encoding="utf-8")
         tmp.replace(target)
