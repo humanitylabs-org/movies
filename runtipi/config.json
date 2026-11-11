@@ -10,8 +10,8 @@
   "categories": [
     "media"
   ],
-  "tipi_version": 5,
-  "version": "0.3.3",
+  "tipi_version": 6,
+  "version": "0.3.4",
   "source": "https://github.com/humanitylabs-org/movies",
   "exposable": false,
   "supported_architectures": [

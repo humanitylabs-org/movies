@@ -20,7 +20,7 @@ from urllib.parse import parse_qs, unquote, urlparse, urlsplit
 from cinequeue.core import MovieStore, WatchStateConflict, parse_movie_requests
 from cinequeue.watch_providers import WatchProviderError, WatchProviderService, configured_region, region_name
 
-VERSION = "0.3.3"
+VERSION = "0.3.4"
 ROOT = Path(__file__).resolve().parents[1]
 STATIC = ROOT / "web"
 # Owner state lives in one writable directory: the packaged app mounts ${APP_DATA_DIR}/data at /data.
@@ -147,14 +147,6 @@ SWITCHES = [
         "default": False,
         "issues": ["humanitylabs-org/movies#14"],
     },
-    {
-        "id": "reply",
-        "name": "Reply on a title",
-        "description": "A Reply button on a title's card (next to Share movie) opens a new, unsent Wizard Chats draft with "
-        "that title attached, so you can start a chat with your agent about it. Movies never sends anything.",
-        "default": False,
-        "issues": ["humanitylabs-org/movies#15"],
-    },
 ]
 
 
@@ -187,6 +179,20 @@ def set_switch(switch_id: str, on: bool, path: Path | str | None = None) -> dict
         tmp.write_text(json.dumps(saved, indent=2), encoding="utf-8")
         tmp.replace(target)
     return switches_doc(target)
+
+
+def prune_switches(path: Path | str | None = None) -> None:
+    """Drop saved values for switches that no longer exist (a removed feature leaves nothing on the box)."""
+    target = Path(path or SWITCHES_FILE)
+    saved = _saved_switches(target)
+    known = {s["id"] for s in SWITCHES}
+    if not saved or set(saved) <= known:
+        return
+    with lock_add_requests(target):
+        kept = {k: v for k, v in _saved_switches(target).items() if k in known and isinstance(v, bool)}
+        tmp = target.with_suffix(target.suffix + ".tmp")
+        tmp.write_text(json.dumps(kept, indent=2), encoding="utf-8")
+        tmp.replace(target)
 
 
 def build_cinequeue_add_prompt(text: str) -> str:
@@ -804,6 +810,7 @@ def run(port: int = 8765, host: str = "127.0.0.1") -> None:
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     from cinequeue.starter import initialize
     initialize(DATA)  # public seed only when the owner store has never existed
+    prune_switches()
     server = ThreadingHTTPServer((host, port), handler)
     public_path = BASE_PATH or "/"
     print(f"Movies running at http://{host}:{port}{public_path}")

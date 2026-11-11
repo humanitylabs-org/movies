@@ -308,28 +308,3 @@ def test_design_rules_fill_window_and_sheet_swipe_close():
     import re
     assert not re.search(r"\.wrap\s*\{[^}]*max-width", CSS)
     assert "addRequestHead.addEventListener('touchend'" in APP
-
-
-def test_detail_reply_opens_an_unsent_chats_draft_only():
-    # Reply hands the title to the shell's unsent Chats draft; feature-detected, synchronous, never sends.
-    assert "window.WizardApp?.hosted === true && typeof window.WizardApp?.nav?.openContextDraft === 'function'" in APP
-    assert "appSwitches.reply === true && (replyHosted() || onItsOwn())" in APP
-    assert 'class="detail-reply" type="button"' in APP and '>Reply</button>' in APP
-    assert "nav.openContextDraft(replyContext(movie))" in APP
-    assert "receipt?.kind !== 'unsent-draft' || receipt.sent !== false" in APP
-    assert "Reload Wizard (refresh the whole page) to turn on Reply. Nothing sent." in APP
-    assert "Draft opened in Chats with this title attached. Nothing sent." in APP
-    body = APP.split("function replyToMovie", 1)[1].split("\nfunction openMovie", 1)[0]
-    assert "await" not in body and "fetch(" not in body and "openThread" not in body
-    ctx = APP.split("function replyContext", 1)[1].split("\nfunction replyToMovie", 1)[0]
-    assert "id: 'title-' + key" in ctx and "slice(0, 32000)" in ctx and "`Movies: ${movie.title}" in ctx
-    assert ".detail-reply-status" in CSS
-
-
-def test_reply_outside_wizard_explains_instead_of_the_raw_host_error():
-    # movies#15 kick-back: opened on its own, Reply showed the shell's raw "Context drafts need the verified Wizard host".
-    body = APP.split("function replyToMovie", 1)[1].split("\nfunction openMovie", 1)[0]
-    assert "if (!replyHosted() && onItsOwn()) { say(REPLY_OUTSIDE, ''); return; }" in body
-    assert body.index("REPLY_OUTSIDE") < body.index("nav.openContextDraft(")
-    assert "/verified Wizard host/i.test(msg) ? REPLY_OUTSIDE" in body
-    assert "Reply works when Movies is open inside Wizard. Open Movies from your Wizard, then tap Reply. Nothing sent." in APP

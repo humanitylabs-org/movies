@@ -116,17 +116,12 @@ def test_friendly_css_is_scoped_to_the_switch():
             assert selector.strip().startswith("html[data-mv-friendly]"), selector
 
 
-def test_reply_switch_is_off_by_default_linked_and_flippable(base, tmp_path):
-    reply = {s["id"]: s for s in call(f"{base}/api/switches")[1]["switches"]}["reply"]
-    assert reply["on"] is False and reply["default"] is False
-    assert reply["issues"] == ["humanitylabs-org/movies#15"]
-    assert reply["name"] and reply["description"]
-    status, doc = flip(base, "reply", True)
-    assert status == 200 and {s["id"]: s["on"] for s in doc["switches"]}["reply"] is True
-    assert json.loads((tmp_path / "switches.json").read_text()) == {"reply": True}
-
-
-def test_reply_button_is_gated_by_the_switch():
-    app = (ROOT / "web" / "app.js").read_text(encoding="utf-8")
-    assert "const canReply = () => appSwitches.reply === true && (replyHosted() || onItsOwn());" in app
-    assert "${canReply() ? '<button class=\"detail-reply\"" in app
+def test_removed_switches_are_gone_and_their_saved_values_pruned(tmp_path):
+    # movies#19: the dropped `reply` switch (movies#15) is gone from the list, and a value saved on a box is removed.
+    assert [s["id"] for s in server.switches_doc(tmp_path / "none.json")["switches"]] == ["friendly-phone"]
+    saved = tmp_path / "switches.json"
+    saved.write_text(json.dumps({"reply": True, "friendly-phone": True}))
+    server.prune_switches(saved)
+    assert json.loads(saved.read_text()) == {"friendly-phone": True}
+    server.prune_switches(tmp_path / "missing.json")
+    assert not (tmp_path / "missing.json").exists()
