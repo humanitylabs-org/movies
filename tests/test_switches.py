@@ -128,5 +128,5 @@ def test_reply_switch_is_off_by_default_linked_and_flippable(base, tmp_path):
 
 def test_reply_button_is_gated_by_the_switch():
     app = (ROOT / "web" / "app.js").read_text(encoding="utf-8")
-    assert "const canReply = () => appSwitches.reply === true && typeof window.WizardApp?.nav?.openContextDraft === 'function';" in app
+    assert "const canReply = () => appSwitches.reply === true && (replyHosted() || onItsOwn());" in app
     assert "${canReply() ? '<button class=\"detail-reply\"" in app

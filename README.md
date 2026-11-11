@@ -21,6 +21,8 @@ With the owner switch `reply` on (Settings > Reply on a title, or the Tracker's 
 attached (type, year, genres, length, queue status, watch dates, director, cast, IMDb rating and links, synopsis
 and notes excerpts), so the owner can start a thread with his agent about it. It goes through the shell's
 `WizardApp.nav.openContextDraft`; Movies sends nothing. Shells without that function simply don't show Reply.
+The draft needs Movies open inside Wizard. Opened on its own (a browser tab or a home-screen icon), Reply says so
+instead of failing (0.3.3).
 
 ## Run locally
 
