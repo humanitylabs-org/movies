@@ -173,10 +173,21 @@ async function submitAddRequest(event) {
     addRequestButton.textContent = 'Adding…';
     try {
       const data = await api('/api/add', { method: 'POST', body: JSON.stringify({ text }) });
-      if (data.count) {
-        const label = data.count === 1 ? (data.added?.[0]?.title || 'Title') : `${data.count} titles`;
-        setAddRequestStatus(`${label} added to the top of your queue.`, 'ok');
-        announce(`${label} added`);
+      // bump-existing switch (movies#23): titles already in the list come back in `bumped`, now first.
+      const bumped = Array.isArray(data.bumped) ? data.bumped : [];
+      if (data.count || bumped.length) {
+        const parts = [];
+        if (data.count) {
+          const label = data.count === 1 ? (data.added?.[0]?.title || 'Title') : `${data.count} titles`;
+          parts.push(`${label} added to the top of your queue.`);
+        }
+        if (bumped.length) {
+          const label = bumped.length === 1 ? (bumped[0]?.title || 'Title') : `${bumped.length} titles`;
+          parts.push(`${label} ${bumped.length === 1 ? 'was' : 'were'} already in your list and ${bumped.length === 1 ? 'is' : 'are'} now first.`);
+        }
+        const message = parts.join(' ');
+        setAddRequestStatus(message, 'ok');
+        announce(message);
         addRequestInput.value = '';
         syncDraftHold();
         await loadMovies();

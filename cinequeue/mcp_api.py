@@ -18,7 +18,7 @@ TOOLS = [
     {"name": "cinequeue_list", "description": "List the queue in order (default), watched history order, archived or all titles. Optional case-insensitive search on title/director/genre.",
      "inputSchema": schema({"view": {"type": "string", "enum": ["queue", "watched", "archived", "all"]}, "search": S, "limit": I})},
     {"name": "cinequeue_get", "description": "Read one title card with its queue position and watch history.", "inputSchema": schema({"id": S}, ("id",))},
-    {"name": "cinequeue_add", "description": "Add titles directly to the top of the queue. Either text ('Stalker 1979, Heat') or one title with optional year. Duplicates are not re-added.",
+    {"name": "cinequeue_add", "description": "Add titles directly to the top of the queue. Either text ('Stalker 1979, Heat') or one title with optional year. Duplicates are not re-added; when the owner's bump-existing switch is on, a title already in the list moves to the top instead (watched ones are queued again, archived ones restored) and is returned in `bumped`.",
      "inputSchema": schema({"text": S, "title": S, "year": I})},
     {"name": "cinequeue_update", "description": "Enrich a card's metadata (poster, description, genres, directors, cast, trailer_url, imdb_id, imdb_url, rating/rating_count/rating_source=imdb, runtime_minutes, notes, featured_episodes, letterboxd_url/slug, media_type, title, year, source). Queue order and watch history are unchanged.",
      "inputSchema": schema({"id": S, "fields": {"type": "object"}}, ("id", "fields"))},
@@ -97,8 +97,13 @@ def call(name: str, a: dict) -> dict:
             items = parse_movie_requests(str(a.get("text") or ""))
         if not items:
             raise ValueError("text or title is required")
-        added = store.add_many(items)
-        return {"added": [store.project(m) for m in added], "count": len(added)}
+        result = store.add_or_bump(items, bump_existing=server.switch_on("bump-existing"))
+        out = {"added": [store.project(m) for m in result["added"]], "count": len(result["added"])}
+        if result["bumped"]:
+            # movies#23: titles already in the list moved to the top (watched ones queued again, archived restored).
+            out["bumped"] = result["bumped"]
+            out["note"] = "Already in the list, now first: " + ", ".join(m.get("title", "") for m in result["bumped"])
+        return out
     if name == "cinequeue_update":
         return {"movie": server.apply_metadata(a["id"], a["fields"])}
     if name == "cinequeue_bump":

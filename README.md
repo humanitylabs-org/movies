@@ -72,6 +72,7 @@ State lives on the box in `CINEQUEUE_DATA/switches.json`; `GET /api/switches` li
 | Switch | Issue | What it changes |
 |---|---|---|
 | `friendly-phone` | movies#14 | Unwatched / Watched / Add in a bottom thumb bar on phones (beside the tabs on wide windows), always-visible row menu, readable Mark watched, 44 px touch targets, helpful empty states. |
+| `bump-existing` | movies#23 | Adding a title that is already in the list moves it to the top instead of leaving it where it is: queued titles are bumped, watched ones queued again (history kept), archived ones restored and bumped. Covers quick add (`/api/add`), `cinequeue_add` and the Wizard add-request prompt. |
 
 ## Test
 
