@@ -1490,7 +1490,7 @@ window.WizardApp?.back.register({
   canGoBack: () => Boolean(openMenu) || (!detail.classList.contains('hidden') && history.state?.cq !== 'movie'),
   back: () => { if (openMenu) closeMenu(); else returnToList(); return true; }
 });
-window.WizardApp?.ready({ name:'Movies', version:'0.3.5' }).then(syncDraftHold);
+window.WizardApp?.ready({ name:'Movies', version:'0.3.6' }).then(syncDraftHold);
 const brandLink = document.querySelector('.brand');
 if (brandLink) brandLink.addEventListener('click', (event) => {
   event.preventDefault();
