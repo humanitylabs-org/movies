@@ -252,11 +252,22 @@ class MovieStore:
         return None
 
     def add_many(self, movies: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        return self.add_or_bump(movies)["added"]
+
+    def add_or_bump(self, movies: list[dict[str, Any]], *, bump_existing: bool = False) -> dict[str, list[dict[str, Any]]]:
+        """Add new titles to the top of the queue.
+
+        A title already in the list is never duplicated; its missing card fields are filled. With `bump_existing`
+        (the `bump-existing` switch, movies#23) it also moves to the top: a watched title is queued again with its
+        history kept, an archived one is restored first. Each bumped entry reports what it `was`.
+        """
         with self._lock:
             existing = self.all()
             by_id = {m["id"]: m for m in existing if "id" in m}
             by_title = {slugify(m.get("title", ""), None): m for m in existing if m.get("title")}
             added: list[dict[str, Any]] = []
+            bumped: list[dict[str, Any]] = []
+            touched: set[str] = set()
             now = datetime.now(timezone.utc).isoformat()
             for movie in movies:
                 title = str(movie.get("title", "")).strip()
@@ -272,6 +283,18 @@ class MovieStore:
                     for key in ("poster", "letterboxd_url", "source"):
                         if movie.get(key) and not current.get(key):
                             current[key] = movie[key]
+                    if bump_existing and current.get("id") not in touched:
+                        before = self.project(current)
+                        was = "archived" if before.get("archived") else ("queued" if before.get("queued") else "watched")
+                        if before.get("archived"):
+                            current["archived"] = False
+                            current.pop("archived_at", None)
+                        if not before.get("queued"):
+                            self._persist_history(current, self._watch_history(current))
+                            current["queued"] = True
+                        existing.insert(0, existing.pop(next(i for i, m in enumerate(existing) if m is current)))
+                        touched.add(current.get("id"))
+                        bumped.append({**self.project(current), "was": was})
                     continue
                 record = {
                     "id": movie_id,
@@ -288,9 +311,10 @@ class MovieStore:
                 }
                 existing.insert(0, record)
                 by_id[movie_id] = record
+                touched.add(movie_id)
                 added.append(record)
             self.save(existing)
-            return added
+            return {"added": added, "bumped": bumped}
 
     def mark_watched(self, movie_id: str, watched_on: str | None = None) -> dict[str, Any]:
         watch_date = normalize_watch_date(watched_on or datetime.now(timezone.utc).date().isoformat())

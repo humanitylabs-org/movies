@@ -11,6 +11,10 @@ For exact-title/year resolution, enrichment, request lifecycle and safe maintena
 - `cinequeue_list`: queue in order (`view` queue|watched|archived|all, optional `search`, `limit`).
 - `cinequeue_get`: one card with queue position and watch history.
 - `cinequeue_add`: `text` ("Stalker 1979, Heat") or `title`+`year`; new titles go to the top.
+  Already in the list? When the `bump-existing` switch is on (`GET /api/switches`), never duplicate it or
+  leave it in place: queued → `cinequeue_bump`; watched → `cinequeue_watch_again` (history kept);
+  archived → `cinequeue_archive` (archived false) then `cinequeue_bump`. Fill missing card fields and tell the
+  owner it was already there and is now first. `cinequeue_add` does this itself and returns it in `bumped`.
 - `cinequeue_update`: enrich a card (poster, description, genres, directors, cast, trailer_url,
   imdb_id/imdb_url, runtime_minutes, notes, featured_episodes, letterboxd_url/slug, media_type).
   Queue order and watch history are never touched by it.
