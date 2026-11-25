@@ -147,15 +147,6 @@ SWITCHES = [
         "default": False,
         "issues": ["humanitylabs-org/movies#14"],
     },
-    {
-        "id": "bump-existing",
-        "name": "Adding a title already in the list bumps it",
-        "description": "Asking Movies to add a title you already have moves it to the top instead of leaving it where "
-        "it is: a queued title is bumped, a watched one is queued again (history kept), an archived one is restored "
-        "and bumped. Quick add, typed requests and your Wizard's add requests all do this.",
-        "default": False,
-        "issues": ["humanitylabs-org/movies#23"],
-    },
 ]
 
 
@@ -218,7 +209,7 @@ def prune_switches(path: Path | str | None = None) -> None:
         tmp.replace(target)
 
 
-# movies#23 (switch bump-existing): an add for a title that is already in the list bumps it to the top.
+# movies#23: an add for a title that is already in the list bumps it to the top.
 BUMP_EXISTING_RULE = (
     "Already in the list? Do not duplicate it and do not leave it where it is. Check with cinequeue_list "
     "(view all, search the title) first. Queued (unwatched): move it to the top with cinequeue_bump. Watched: queue "
@@ -228,16 +219,12 @@ BUMP_EXISTING_RULE = (
 )
 
 
-def build_cinequeue_add_prompt(text: str, *, bump_existing: bool | None = None) -> str:
+def build_cinequeue_add_prompt(text: str) -> str:
     requested = clip(text, 800)
-    if bump_existing is None:
-        bump_existing = switch_on("bump-existing")
     prompt = f"""Add this to the owner's Movies: {requested}
 
 Use the Movies app's own MCP tools (cinequeue_*) or its documented HTTP API, not app files, the container or the bare quick-add shortcut alone. Resolve exact-title candidates first (Letterboxd or another reliable film source); if multiple years/titles plausibly match, mark the request blocked before writing: `detail` is one short question (no URLs) and `choices` lists 2-6 short tappable answers such as "Metropolis (1927) · Fritz Lang"; the owner taps one in the app. Once the intended film/series is clear, add it with cinequeue_add and enrich the card with cinequeue_update: poster, Letterboxd URL/slug, IMDb ID/URL, year, description, genres, directors/creators, cast, trailer, runtime when available, and source. When the owner names specific episodes or other viewing priorities, keep the synopsis clean, put the human note in `notes`, and store structured episode entries in `featured_episodes` so the detail view can highlight them. Only set `rating`, `rating_count` and `rating_source: imdb` from IMDb's official `title.ratings.tsv.gz` dataset; never hand-copy or relabel a Letterboxd score. Replace any bare placeholder instead of duplicating it. Verify with cinequeue_get. Record the request lifecycle with cinequeue_request_update: `processing` when work starts, `completed` only after verification, or `blocked`/`failed` with a concise detail when work cannot finish."""
-    if bump_existing:
-        prompt += "\n\n" + BUMP_EXISTING_RULE
-    return prompt
+    return prompt + "\n\n" + BUMP_EXISTING_RULE
 
 
 def queue_add_request(text: str, *, request_log_path: Path | str = ADD_REQUESTS) -> dict:
@@ -699,7 +686,7 @@ class CineQueueHandler(SimpleHTTPRequestHandler):
             payload = self._read_json()
             text = str(payload.get("text") or payload.get("title") or "")
             movies = parse_movie_requests(text)
-            result = self.store.add_or_bump(movies, bump_existing=switch_on("bump-existing"))
+            result = self.store.add_or_bump(movies)
             return self._json({"added": result["added"], "count": len(result["added"]), "bumped": result["bumped"]})
         if clean_path == "/api/request-add":
             payload = self._read_json()

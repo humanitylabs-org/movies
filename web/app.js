@@ -173,7 +173,7 @@ async function submitAddRequest(event) {
     addRequestButton.textContent = 'Adding…';
     try {
       const data = await api('/api/add', { method: 'POST', body: JSON.stringify({ text }) });
-      // bump-existing switch (movies#23): titles already in the list come back in `bumped`, now first.
+      // movies#23: titles already in the list come back in `bumped`, now first.
       const bumped = Array.isArray(data.bumped) ? data.bumped : [];
       if (data.count || bumped.length) {
         const parts = [];
@@ -193,7 +193,7 @@ async function submitAddRequest(event) {
         await loadMovies();
         setTimeout(closeAddRequestPanel, 600);
       } else {
-        setAddRequestStatus('Already in your queue, or nothing recognisable to add.', 'error');
+        setAddRequestStatus('Nothing recognisable to add.', 'error');
       }
     } catch (error) {
       console.error(error);
