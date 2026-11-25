@@ -118,7 +118,7 @@ def test_friendly_css_is_scoped_to_the_switch():
 
 def test_removed_switches_are_gone_and_their_saved_values_pruned(tmp_path):
     # movies#19: the dropped `reply` switch (movies#15) is gone from the list, and a value saved on a box is removed.
-    assert [s["id"] for s in server.switches_doc(tmp_path / "none.json")["switches"]] == ["friendly-phone", "bump-existing"]
+    assert [s["id"] for s in server.switches_doc(tmp_path / "none.json")["switches"]] == ["friendly-phone"]
     saved = tmp_path / "switches.json"
     saved.write_text(json.dumps({"reply": True, "friendly-phone": True}))
     server.prune_switches(saved)

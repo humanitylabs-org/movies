@@ -254,11 +254,11 @@ class MovieStore:
     def add_many(self, movies: list[dict[str, Any]]) -> list[dict[str, Any]]:
         return self.add_or_bump(movies)["added"]
 
-    def add_or_bump(self, movies: list[dict[str, Any]], *, bump_existing: bool = False) -> dict[str, list[dict[str, Any]]]:
+    def add_or_bump(self, movies: list[dict[str, Any]]) -> dict[str, list[dict[str, Any]]]:
         """Add new titles to the top of the queue.
 
-        A title already in the list is never duplicated; its missing card fields are filled. With `bump_existing`
-        (the `bump-existing` switch, movies#23) it also moves to the top: a watched title is queued again with its
+        A title already in the list is never duplicated; its missing card fields are filled and (movies#23) it
+        moves to the top: a watched title is queued again with its
         history kept, an archived one is restored first. Each bumped entry reports what it `was`.
         """
         with self._lock:
@@ -283,7 +283,7 @@ class MovieStore:
                     for key in ("poster", "letterboxd_url", "source"):
                         if movie.get(key) and not current.get(key):
                             current[key] = movie[key]
-                    if bump_existing and current.get("id") not in touched:
+                    if current.get("id") not in touched:
                         before = self.project(current)
                         was = "archived" if before.get("archived") else ("queued" if before.get("queued") else "watched")
                         if before.get("archived"):

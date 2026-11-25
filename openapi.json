@@ -201,7 +201,7 @@
             }
           }
         },
-        "description": "Titles already in the list are not duplicated. With the owner's `bump-existing` switch on (movies#23) they move to the top instead (watched ones queued again with history kept, archived ones restored) and are returned in `bumped`, each with `was` (queued, watched or archived)."
+        "description": "Titles already in the list are not duplicated. They move to the top instead (movies#23) (watched ones queued again with history kept, archived ones restored) and are returned in `bumped`, each with `was` (queued, watched or archived)."
       }
     },
     "/api/update/{id}": {
